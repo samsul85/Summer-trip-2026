@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Summer Trip 2026</title>
+<style>
+  :root{
+    --sand:#f4ecd9;
+    --paper:#fbf6ea;
+    --ink:#2f2a24;
+    --ink-soft:#5c5445;
+    --line:#e2d6bd;
+    --card:#fffdf7;
+    --teal:#1f7a70;
+    --teal-soft:#d3ebe7;
+    --ochre:#c98a1b;
+    --ochre-soft:#f3e2bf;
+    --clay:#b5563d;
+    --clay-soft:#f0d6cd;
+    --shadow:0 1px 3px rgba(60,45,20,.10),0 8px 24px rgba(60,45,20,.06);
+    --radius:14px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --sand:#211d17;
+      --paper:#1a1712;
+      --ink:#efe7d6;
+      --ink-soft:#b7ac97;
+      --line:#3a3226;
+      --card:#262019;
+      --teal:#5cc4b7;
+      --teal-soft:#1e3a37;
+      --ochre:#e0aa4a;
+      --ochre-soft:#3a2f18;
+      --clay:#e0866c;
+      --clay-soft:#3a241d;
+      --shadow:0 1px 3px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.3);
+    }
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 100% -10%, rgba(201,138,27,.10), transparent 60%),
+      radial-gradient(1000px 500px at -10% 10%, rgba(31,122,112,.10), transparent 55%),
+      var(--sand);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.55;
+  }
+  .wrap{max-width:960px;margin:0 auto;padding:0 20px 64px}
+  h1,h2,h3,.serif{font-family:Georgia,"Times New Roman",'Iowan Old Style',serif}
+
+  /* Hero */
+  .hero{
+    margin:28px 0 32px;
+    padding:44px 34px;
+    border-radius:22px;
+    background:linear-gradient(135deg,var(--teal),#155e56);
+    color:#fdf8ec;
+    box-shadow:var(--shadow);
+    position:relative;
+    overflow:hidden;
+  }
+  .hero::after{
+    content:"";position:absolute;right:-60px;top:-60px;width:260px;height:260px;
+    background:radial-gradient(circle,rgba(201,138,27,.55),transparent 65%);
+  }
+  .hero .kicker{letter-spacing:.18em;text-transform:uppercase;font-size:.72rem;opacity:.85;margin:0 0 10px}
+  .hero h1{margin:0;font-size:clamp(2.1rem,6vw,3.4rem);line-height:1.05;letter-spacing:.5px}
+  .hero .range{margin:14px 0 0;font-size:clamp(1rem,2.4vw,1.25rem);opacity:.95}
+  .hero .who{margin:6px 0 0;font-size:.95rem;opacity:.8}
+
+  section{margin:38px 0}
+  h2{font-size:1.5rem;margin:0 0 4px;color:var(--ink)}
+  .sub{color:var(--ink-soft);margin:0 0 18px;font-size:.95rem}
+
+  /* Legend */
+  .legend{display:flex;flex-wrap:wrap;gap:10px 18px;margin:0 0 22px}
+  .legend span{display:inline-flex;align-items:center;gap:8px;font-size:.9rem;color:var(--ink-soft)}
+  .dot{width:16px;height:16px;border-radius:5px;display:inline-block;border:1px solid rgba(0,0,0,.06)}
+  .k-travel{background:var(--ochre-soft);border-color:var(--ochre)}
+  .k-home{background:var(--teal-soft);border-color:var(--teal)}
+  .k-resort{background:var(--clay-soft);border-color:var(--clay)}
+
+  /* Calendars */
+  .cals{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+  @media (max-width:680px){.cals{grid-template-columns:1fr}}
+  .cal{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}
+  .cal h3{margin:2px 4px 14px;font-size:1.2rem;text-align:center}
+  table{width:100%;border-collapse:collapse;table-layout:fixed}
+  th{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);font-weight:600;padding:4px 0 8px}
+  td{padding:2px}
+  .day{
+    aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;
+    border-radius:9px;font-size:.9rem;font-variant-numeric:tabular-nums;
+    color:var(--ink);
+  }
+  .day.empty{visibility:hidden}
+  .day.travel{background:var(--ochre-soft);color:var(--ochre);font-weight:700;box-shadow:inset 0 0 0 1px var(--ochre)}
+  .day.home{background:var(--teal-soft);color:var(--teal);font-weight:700;box-shadow:inset 0 0 0 1px var(--teal)}
+  .day.resort{background:var(--clay-soft);color:var(--clay);font-weight:700;box-shadow:inset 0 0 0 1px var(--clay)}
+
+  /* Plans */
+  .plan{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:8px 22px}
+  .plan .row{display:flex;gap:16px;padding:14px 0;border-bottom:1px solid var(--line);align-items:baseline}
+  .plan .row:last-child{border-bottom:0}
+  .plan .when{flex:0 0 148px;font-weight:700;color:var(--ink);font-size:.95rem}
+  .plan .what{color:var(--ink-soft)}
+  .tag{display:inline-block;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;padding:2px 9px;border-radius:999px;font-weight:700;margin-left:2px;vertical-align:middle}
+  .tag.travel{background:var(--ochre-soft);color:var(--ochre)}
+  .tag.home{background:var(--teal-soft);color:var(--teal)}
+  .tag.resort{background:var(--clay-soft);color:var(--clay)}
+
+  /* Packing */
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+  @media (max-width:680px){.cols{grid-template-columns:1fr}}
+  .pack{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 22px}
+  .pack h3{margin:0 0 12px;font-size:1.1rem;color:var(--teal)}
+  .pack ul{list-style:none;margin:0;padding:0}
+  .pack li{position:relative;padding:6px 0 6px 28px;color:var(--ink-soft);font-size:.95rem;border-bottom:1px dashed var(--line)}
+  .pack li:last-child{border-bottom:0}
+  .pack li::before{
+    content:"";position:absolute;left:0;top:9px;width:16px;height:16px;border-radius:5px;
+    border:1.5px solid var(--ochre);background:transparent;
+  }
+
+  footer{margin:48px 0 0;padding-top:20px;border-top:1px solid var(--line);color:var(--ink-soft);font-size:.85rem;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <p class="kicker">Family Vacation &middot; View only</p>
+    <h1>Summer Trip 2026</h1>
+    <p class="range">Saturday, August 8 &ndash; Thursday, September 10, 2026</p>
+    <p class="who">Our family &middot; two adults &amp; four children</p>
+  </header>
+
+  <!-- CALENDARS -->
+  <section>
+    <h2>Trip calendar</h2>
+    <p class="sub">Color-coded by phase. Refresh anytime to see the latest plan.</p>
+
+    <div class="legend">
+      <span><i class="dot k-travel"></i> Travel days</span>
+      <span><i class="dot k-home"></i> Home base</span>
+      <span><i class="dot k-resort"></i> Resort stay</span>
+    </div>
+
+    <div class="cals">
+      <!-- AUGUST 2026 — Aug 1 is a Saturday -->
+      <div class="cal">
+        <h3>August 2026</h3>
+        <table>
+          <thead><tr><th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><div class="day empty"></div></td><td><div class="day empty"></div></td><td><div class="day empty"></div></td><td><div class="day empty"></div></td><td><div class="day empty"></div></td><td><div class="day empty"></div></td><td><div class="day">1</div></td>
+            </tr>
+            <tr>
+              <td><div class="day">2</div></td><td><div class="day">3</div></td><td><div class="day">4</div></td><td><div class="day">5</div></td><td><div class="day">6</div></td><td><div class="day">7</div></td><td><div class="day travel">8</div></td>
+            </tr>
+            <tr>
+              <td><div class="day travel">9</div></td><td><div class="day travel">10</div></td><td><div class="day home">11</div></td><td><div class="day home">12</div></td><td><div class="day home">13</div></td><td><div class="day home">14</div></td><td><div class="day home">15</div></td>
+            </tr>
+            <tr>
+              <td><div class="day home">16</div></td><td><div class="day home">17</div></td><td><div class="day home">18</div></td><td><div class="day home">19</div></td><td><div class="day home">20</div></td><td><div class="day home">21</div></td><td><div class="day home">22</div></td>
+            </tr>
+            <tr>
+              <td><div class="day home">23</div></td><td><div class="day home">24</div></td><td><div class="day home">25</div></td><td><div class="day resort">26</div></td><td><div class="day resort">27</div></td><td><div class="day resort">28</div></td><td><div class="day home">29</div></td>
+            </tr>
+            <tr>
+              <td><div class="day home">30</div></td><td><div class="day home">31</div></td><td><div class="day empty"></div></td><td><div class="day empty"></div></td><td><div class="day empty"></div></td><td><div class="day empty"></div></td><td><div class="day empty"></div></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- SEPTEMBER 2026 — Sep 1 is a Tuesday -->
+      <div class="cal">
+        <h3>September 2026</h3>
+        <table>
+          <thead><tr><th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><div class="day empty"></div></td><td><div class="day empty"></div></td><td><div class="day home">1</div></td><td><div class="day home">2</div></td><td><div class="day home">3</div></td><td><div class="day home">4</div></td><td><div class="day home">5</div></td>
+            </tr>
+            <tr>
+              <td><div class="day home">6</div></td><td><div class="day home">7</div></td><td><div class="day home">8</div></td><td><div class="day home">9</div></td><td><div class="day travel">10</div></td><td><div class="day">11</div></td><td><div class="day">12</div></td>
+            </tr>
+            <tr>
+              <td><div class="day">13</div></td><td><div class="day">14</div></td><td><div class="day">15</div></td><td><div class="day">16</div></td><td><div class="day">17</div></td><td><div class="day">18</div></td><td><div class="day">19</div></td>
+            </tr>
+            <tr>
+              <td><div class="day">20</div></td><td><div class="day">21</div></td><td><div class="day">22</div></td><td><div class="day">23</div></td><td><div class="day">24</div></td><td><div class="day">25</div></td><td><div class="day">26</div></td>
+            </tr>
+            <tr>
+              <td><div class="day">27</div></td><td><div class="day">28</div></td><td><div class="day">29</div></td><td><div class="day">30</div></td><td><div class="day empty"></div></td><td><div class="day empty"></div></td><td><div class="day empty"></div></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- PLANS -->
+  <section>
+    <h2>Plans &amp; notes</h2>
+    <p class="sub">Day-by-day outline of the trip.</p>
+    <div class="plan">
+      <div class="row"><div class="when">Aug 8&ndash;10</div><div class="what"><span class="tag travel">Travel</span> Travel days &mdash; depart Saturday, Aug 8; arrive at home base Monday, Aug 10.</div></div>
+      <div class="row"><div class="when">Aug 11&ndash;25</div><div class="what"><span class="tag home">Home base</span> Settling in at home base &mdash; relaxed days, local outings, and family time.</div></div>
+      <div class="row"><div class="when">Aug 26&ndash;28</div><div class="what"><span class="tag resort">Resort stay</span> Three nights at the resort stay (Wed&ndash;Fri).</div></div>
+      <div class="row"><div class="when">Aug 29 &ndash; Sep 9</div><div class="what"><span class="tag home">Home base</span> Back at home base for the second stretch &mdash; more of the good stuff.</div></div>
+      <div class="row"><div class="when">Sep 10</div><div class="what"><span class="tag travel">Travel</span> Fly home Thursday, Sep 10.</div></div>
+    </div>
+  </section>
+
+  <!-- PACKING -->
+  <section>
+    <h2>Packing checklist</h2>
+    <p class="sub">A generic starting point &mdash; adjust as needed.</p>
+    <div class="cols">
+      <div class="pack">
+        <h3>Documents &amp; money</h3>
+        <ul>
+          <li>Travel documents for everyone</li>
+          <li>Boarding passes / booking confirmations</li>
+          <li>Payment cards &amp; some local cash</li>
+          <li>Travel insurance details</li>
+          <li>Copies of key documents (paper + phone)</li>
+          <li>Emergency contact list</li>
+        </ul>
+      </div>
+      <div class="pack">
+        <h3>Clothing</h3>
+        <ul>
+          <li>Everyday outfits for two-plus weeks</li>
+          <li>Light layers &amp; a warm option for evenings</li>
+          <li>Comfortable walking shoes</li>
+          <li>Rain jacket / umbrella</li>
+          <li>Sleepwear &amp; underclothes</li>
+          <li>Laundry bag</li>
+        </ul>
+      </div>
+      <div class="pack">
+        <h3>Health &amp; toiletries</h3>
+        <ul>
+          <li>Regular medications &amp; a small first-aid kit</li>
+          <li>Sunscreen &amp; after-sun</li>
+          <li>Toothbrushes, toothpaste, soap, shampoo</li>
+          <li>Insect repellent</li>
+          <li>Hand sanitizer &amp; wipes</li>
+          <li>Reusable water bottles</li>
+        </ul>
+      </div>
+      <div class="pack">
+        <h3>Kids &amp; resort days</h3>
+        <ul>
+          <li>Swimwear &amp; towels for the resort stay</li>
+          <li>Hats &amp; sunglasses for everyone</li>
+          <li>Snacks &amp; travel-day entertainment</li>
+          <li>Chargers, headphones &amp; a power bank</li>
+          <li>Small day bag / backpack</li>
+          <li>Comfort items for the little ones</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Summer Trip 2026 &middot; A view-only family calendar. Refresh for the latest updates.
+  </footer>
+
+</div>
+</body>
+</html>
