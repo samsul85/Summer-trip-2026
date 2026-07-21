@@ -71,7 +71,6 @@
   .hero .kicker{letter-spacing:.18em;text-transform:uppercase;font-size:.72rem;opacity:.85;margin:0 0 10px}
   .hero h1{margin:0;font-size:clamp(2.1rem,6vw,3.4rem);line-height:1.05;letter-spacing:.5px}
   .hero .range{margin:14px 0 0;font-size:clamp(1rem,2.4vw,1.25rem);opacity:.95}
-  .hero .who{margin:6px 0 0;font-size:.95rem;opacity:.8}
 
   section{margin:38px 0}
   h2{font-size:1.5rem;margin:0 0 4px;color:var(--ink)}
@@ -84,6 +83,7 @@
   .k-travel{background:var(--ochre-soft);border-color:var(--ochre)}
   .k-home{background:var(--teal-soft);border-color:var(--teal)}
   .k-resort{background:var(--clay-soft);border-color:var(--clay)}
+  .k-event{background:var(--clay);border-color:var(--clay);border-radius:50%;width:9px;height:9px}
 
   /* Calendars */
   .cals{display:grid;grid-template-columns:1fr 1fr;gap:22px}
@@ -94,6 +94,7 @@
   th{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);font-weight:600;padding:4px 0 8px}
   td{padding:2px}
   .day{
+    position:relative;
     aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;
     border-radius:9px;font-size:.9rem;font-variant-numeric:tabular-nums;
     color:var(--ink);
@@ -102,6 +103,7 @@
   .day.travel{background:var(--ochre-soft);color:var(--ochre);font-weight:700;box-shadow:inset 0 0 0 1px var(--ochre)}
   .day.home{background:var(--teal-soft);color:var(--teal);font-weight:700;box-shadow:inset 0 0 0 1px var(--teal)}
   .day.resort{background:var(--clay-soft);color:var(--clay);font-weight:700;box-shadow:inset 0 0 0 1px var(--clay)}
+  .day .evdot{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:6px;height:6px;border-radius:50%;background:var(--clay);box-shadow:0 0 0 2px var(--card)}
 
   /* Plans */
   .plan{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:8px 22px}
@@ -133,31 +135,40 @@
   .day:not(.empty){cursor:pointer;transition:transform .08s ease, box-shadow .08s ease}
   .day:not(.empty):hover{transform:translateY(-1px);box-shadow:inset 0 0 0 2px var(--teal)}
   .day.travel:hover,.day.resort:hover,.day.home:hover{box-shadow:inset 0 0 0 2px currentColor}
-  .hint{margin:14px 0 0;font-size:.85rem;color:var(--ink-soft);font-style:italic}
 
   /* Modal */
   .modal-back{position:fixed;inset:0;background:rgba(30,22,10,.5);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}
   .modal-back.open{display:flex}
-  .modal{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.35);max-width:460px;width:100%;padding:24px}
+  .modal{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.35);max-width:460px;width:100%;padding:24px;max-height:90vh;overflow:auto}
   .modal h3{margin:0 0 2px;font-size:1.3rem;color:var(--teal)}
-  .modal .m-date{margin:0 0 16px;color:var(--ink-soft);font-size:.92rem}
+  .modal .m-date{margin:0 0 14px;color:var(--ink-soft);font-size:.92rem}
   .modal label{display:block;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);font-weight:600;margin:12px 0 5px}
-  .modal input[type=text]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);font-size:1rem;font-family:inherit}
+  .modal input[type=text],.modal input[type=password]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);font-size:1rem;font-family:inherit}
   .modal input:focus{outline:2px solid var(--teal);outline-offset:1px}
-  .snip{margin-top:16px;background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:12px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.82rem;white-space:pre-wrap;word-break:break-word;color:var(--ink-soft);min-height:20px}
   .modal .btns{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
   .btn{border:0;border-radius:9px;padding:10px 16px;font-size:.92rem;font-weight:600;cursor:pointer;font-family:inherit}
   .btn.primary{background:var(--teal);color:#fff}
   .btn.ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line)}
   .btn:active{transform:translateY(1px)}
-  .m-note{margin:14px 0 0;font-size:.8rem;color:var(--ink-soft);line-height:1.4}
+  .btn[disabled]{opacity:.5;cursor:default}
+
+  .evlist{margin:4px 0 0;padding:0;list-style:none}
+  .evlist li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:.92rem;color:var(--ink)}
+  .evlist li:last-child{border-bottom:0}
+  .evlist .etime{color:var(--teal);font-weight:700;margin-right:6px}
+  .evlist .del{background:none;border:0;color:var(--clay);cursor:pointer;font-size:.8rem;font-weight:700;padding:2px 4px}
+  .evempty{color:var(--ink-soft);font-size:.9rem;font-style:italic;padding:6px 0 2px}
+  .divider{height:1px;background:var(--line);margin:16px 0}
+  .status{margin-top:10px;font-size:.85rem;min-height:18px}
+  .status.err{color:var(--clay)}
+  .status.ok{color:var(--teal)}
 </style>
 </head>
 <body>
 <div class="wrap">
 
   <header class="hero">
-    <p class="kicker">Family Vacation &middot; View only</p>
+    <p class="kicker">Family Vacation &middot; Live &amp; editable</p>
     <h1>Summer Trip 2026 Libya</h1>
     <p class="range">Saturday, August 8 &ndash; Thursday, September 10, 2026</p>
   </header>
@@ -165,12 +176,13 @@
   <!-- CALENDARS -->
   <section>
     <h2>Trip calendar</h2>
-    <p class="sub">Color-coded by phase. Refresh anytime to see the latest plan. <strong>Tip:</strong> click any day to draft an event.</p>
+    <p class="sub">Color-coded by phase. <strong>Click any day</strong> to view or add events &mdash; changes save instantly for everyone.</p>
 
     <div class="legend">
       <span><i class="dot k-travel"></i> Travel days</span>
       <span><i class="dot k-home"></i> Home base</span>
       <span><i class="dot k-resort"></i> Resort stay</span>
+      <span><i class="dot k-event"></i> Has events</span>
     </div>
 
     <div class="cals">
@@ -236,7 +248,6 @@
     <div class="plan">
       <div class="row"><div class="when">Aug 8&ndash;10</div><div class="what"><span class="tag travel">Travel</span> Travel days &mdash; depart Saturday, Aug 8; arrive at home base Monday, Aug 10.</div></div>
       <div class="row"><div class="when">Aug 11&ndash;25</div><div class="what"><span class="tag home">Home base</span> Settling in at home base &mdash; relaxed days, local outings, and family time.</div></div>
-      <div class="row"><div class="when">Aug 14</div><div class="what"><span class="tag home">Home base</span> 2 pm: lunch with parents.</div></div>
       <div class="row"><div class="when">Aug 26&ndash;28</div><div class="what"><span class="tag resort">Resort stay</span> Three nights at the resort stay (Wed&ndash;Fri).</div></div>
       <div class="row"><div class="when">Aug 29 &ndash; Sep 9</div><div class="what"><span class="tag home">Home base</span> Back at home base for the second stretch &mdash; more of the good stuff.</div></div>
       <div class="row"><div class="when">Sep 10</div><div class="what"><span class="tag travel">Travel</span> Fly home Thursday, Sep 10.</div></div>
@@ -296,31 +307,35 @@
   </section>
 
   <footer>
-    Summer Trip 2026 &middot; A view-only family calendar. Refresh for the latest updates.
+    Summer Trip 2026 &middot; A live family calendar. Events save instantly for everyone.
   </footer>
 
 </div>
 
-<!-- Add-event modal (copy-paste snippet workflow) -->
+<!-- Add/view-event modal (live, backend-backed) -->
 <div class="modal-back" id="modalBack" role="dialog" aria-modal="true" aria-labelledby="mTitle">
   <div class="modal">
-    <h3 id="mTitle">Add an event</h3>
+    <h3 id="mTitle">Events</h3>
     <p class="m-date" id="mDate">&nbsp;</p>
 
-    <label for="evTitle">Event</label>
-    <input type="text" id="evTitle" placeholder="e.g. Beach day" autocomplete="off">
+    <ul class="evlist" id="evList"></ul>
+    <p class="evempty" id="evEmpty" hidden>No events yet for this day.</p>
+
+    <div class="divider"></div>
+
+    <label for="evTitle">Add an event</label>
+    <input type="text" id="evTitle" placeholder="e.g. Beach day" autocomplete="off" maxlength="200">
 
     <label for="evTime">Time (optional)</label>
-    <input type="text" id="evTime" placeholder="e.g. 2:00 PM" autocomplete="off">
+    <input type="text" id="evTime" placeholder="e.g. 2:00 PM" autocomplete="off" maxlength="40">
 
-    <label>Snippet to share</label>
-    <div class="snip" id="snip">Type an event above&hellip;</div>
+    <label for="evPass">Family passcode</label>
+    <input type="password" id="evPass" placeholder="Required to save or delete" autocomplete="off">
 
-    <p class="m-note">This page can&rsquo;t save events itself. Copy the line above and send it to whoever maintains the page (or paste the HTML into <code>index.html</code>) to make it permanent for everyone.</p>
+    <p class="status" id="status"></p>
 
     <div class="btns">
-      <button class="btn primary" id="copyLine" type="button">Copy line</button>
-      <button class="btn ghost" id="copyHtml" type="button">Copy HTML</button>
+      <button class="btn primary" id="saveBtn" type="button">Save event</button>
       <button class="btn ghost" id="closeModal" type="button">Close</button>
     </div>
   </div>
@@ -330,47 +345,136 @@
 (function(){
   var WEEKDAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
   var MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+  var API='/api/events';
+
   var back=document.getElementById('modalBack');
   var mDate=document.getElementById('mDate');
+  var evList=document.getElementById('evList');
+  var evEmpty=document.getElementById('evEmpty');
   var evTitle=document.getElementById('evTitle');
   var evTime=document.getElementById('evTime');
-  var snip=document.getElementById('snip');
-  var current={y:0,m:0,d:0,weekday:''};
+  var evPass=document.getElementById('evPass');
+  var statusEl=document.getElementById('status');
+  var saveBtn=document.getElementById('saveBtn');
 
-  function fmtLine(){
-    var t=evTitle.value.trim();
-    var when=evTime.value.trim();
-    var head=current.weekday+', '+MONTHS[current.m-1]+' '+current.d+', '+current.y;
-    if(!t) return head+' — (your event)';
-    return head+' — '+(when? when+': ':'')+t;
+  var events=[];              // all events, from the API
+  var current={y:0,m:0,d:0};  // currently open day
+
+  function pad(n){return ('0'+n).slice(-2);}
+  function keyOf(y,m,d){return y+'-'+pad(m)+'-'+pad(d);}
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+  function setStatus(msg,kind){ statusEl.textContent=msg||''; statusEl.className='status'+(kind?' '+kind:''); }
+
+  function dayCells(){
+    return Array.prototype.slice.call(document.querySelectorAll('table[data-year] .day'))
+      .filter(function(c){return !c.classList.contains('empty') && c.firstChild;});
   }
-  function fmtHtml(){
-    var t=evTitle.value.trim()||'(your event)';
-    var when=evTime.value.trim();
-    var m2=('0'+current.m).slice(-2), d2=('0'+current.d).slice(-2);
-    var whenTxt=when? when+': ':'';
-    return '<div class="row"><div class="when">'+MONTHS[current.m-1].slice(0,3)+' '+current.d+
-      '</div><div class="what">'+whenTxt+t+'</div></div>';
+
+  // Paint a small dot on every day that has at least one event.
+  function renderDots(){
+    var counts={};
+    events.forEach(function(e){ counts[e.day]=(counts[e.day]||0)+1; });
+    dayCells().forEach(function(cell){
+      var tbl=cell.closest('table');
+      var y=parseInt(tbl.getAttribute('data-year'),10);
+      var m=parseInt(tbl.getAttribute('data-month'),10);
+      var d=parseInt(cell.textContent.replace(/\D+/g,''),10);
+      var existing=cell.querySelector('.evdot');
+      if(counts[keyOf(y,m,d)]){
+        if(!existing){ var s=document.createElement('span'); s.className='evdot'; cell.appendChild(s); }
+      } else if(existing){ existing.remove(); }
+    });
   }
-  function refresh(){ snip.textContent=fmtLine(); }
+
+  function eventsForCurrent(){
+    var k=keyOf(current.y,current.m,current.d);
+    return events.filter(function(e){return e.day===k;});
+  }
+
+  function renderList(){
+    var list=eventsForCurrent();
+    evList.innerHTML='';
+    evEmpty.hidden = list.length>0;
+    list.forEach(function(e){
+      var li=document.createElement('li');
+      var span=document.createElement('span');
+      span.innerHTML=(e.time? '<span class="etime">'+esc(e.time)+'</span>':'')+esc(e.title);
+      var del=document.createElement('button');
+      del.className='del'; del.type='button'; del.textContent='Delete';
+      del.addEventListener('click',function(){ removeEvent(e.id); });
+      li.appendChild(span); li.appendChild(del);
+      evList.appendChild(li);
+    });
+  }
 
   function openFor(y,m,d){
+    current={y:y,m:m,d:d};
     var wd=new Date(y,m-1,d).getDay();
-    current={y:y,m:m,d:d,weekday:WEEKDAYS[wd]};
-    mDate.textContent=current.weekday+', '+MONTHS[m-1]+' '+d+', '+y;
+    mDate.textContent=WEEKDAYS[wd]+', '+MONTHS[m-1]+' '+d+', '+y;
     evTitle.value=''; evTime.value='';
-    refresh();
+    evPass.value=localStorage.getItem('tripEditPass')||'';
+    setStatus('');
+    renderList();
     back.classList.add('open');
     setTimeout(function(){evTitle.focus();},30);
   }
   function close(){ back.classList.remove('open'); }
 
-  document.querySelectorAll('table[data-year] .day').forEach(function(cell){
-    if(cell.classList.contains('empty')) return;
+  function loadEvents(){
+    return fetch(API).then(function(r){return r.json();}).then(function(data){
+      events=(data && data.events)||[];
+      renderDots();
+      if(back.classList.contains('open')) renderList();
+    }).catch(function(){ /* offline / not deployed yet — page still works read-only */ });
+  }
+
+  function saveEvent(){
+    var title=evTitle.value.trim();
+    var time=evTime.value.trim();
+    var pass=evPass.value;
+    if(!title){ setStatus('Enter an event first.','err'); evTitle.focus(); return; }
+    if(!pass){ setStatus('Enter the family passcode.','err'); evPass.focus(); return; }
+    localStorage.setItem('tripEditPass',pass);
+    saveBtn.disabled=true; setStatus('Saving…');
+    fetch(API,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-edit-pass':pass},
+      body:JSON.stringify({day:keyOf(current.y,current.m,current.d),title:title,time:time})
+    }).then(function(r){return r.json().then(function(b){return {ok:r.ok,body:b};});})
+      .then(function(res){
+        if(!res.ok){ setStatus(res.body.error||'Could not save.','err'); return; }
+        events.push(res.body.event);
+        evTitle.value=''; evTime.value='';
+        renderList(); renderDots();
+        setStatus('Saved!','ok');
+        evTitle.focus();
+      }).catch(function(){ setStatus('Network error — try again.','err'); })
+      .then(function(){ saveBtn.disabled=false; });
+  }
+
+  function removeEvent(id){
+    var pass=evPass.value||localStorage.getItem('tripEditPass')||'';
+    if(!pass){ setStatus('Enter the family passcode to delete.','err'); evPass.focus(); return; }
+    setStatus('Deleting…');
+    fetch(API+'?id='+encodeURIComponent(id),{
+      method:'DELETE',
+      headers:{'x-edit-pass':pass}
+    }).then(function(r){return r.json().then(function(b){return {ok:r.ok,body:b};});})
+      .then(function(res){
+        if(!res.ok){ setStatus(res.body.error||'Could not delete.','err'); return; }
+        events=events.filter(function(e){return e.id!==id;});
+        renderList(); renderDots();
+        setStatus('Deleted.','ok');
+      }).catch(function(){ setStatus('Network error — try again.','err'); });
+  }
+
+  // Wire up day clicks.
+  dayCells().forEach(function(cell){
     var tbl=cell.closest('table');
     var y=parseInt(tbl.getAttribute('data-year'),10);
     var m=parseInt(tbl.getAttribute('data-month'),10);
-    var d=parseInt(cell.textContent.trim(),10);
+    var d=parseInt(cell.textContent.replace(/\D+/g,''),10);
     if(!d) return;
     cell.setAttribute('role','button');
     cell.setAttribute('tabindex','0');
@@ -380,26 +484,13 @@
     });
   });
 
-  evTitle.addEventListener('input',refresh);
-  evTime.addEventListener('input',refresh);
+  saveBtn.addEventListener('click',saveEvent);
+  evTitle.addEventListener('keydown',function(e){ if(e.key==='Enter') saveEvent(); });
   document.getElementById('closeModal').addEventListener('click',close);
   back.addEventListener('click',function(e){ if(e.target===back) close(); });
   document.addEventListener('keydown',function(e){ if(e.key==='Escape') close(); });
 
-  function copy(text,btn){
-    var done=function(){ var o=btn.textContent; btn.textContent='Copied!'; setTimeout(function(){btn.textContent=o;},1200); };
-    if(navigator.clipboard&&navigator.clipboard.writeText){
-      navigator.clipboard.writeText(text).then(done,function(){fallback(text);done();});
-    } else { fallback(text); done(); }
-  }
-  function fallback(text){
-    var ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
-    document.body.appendChild(ta); ta.select();
-    try{document.execCommand('copy');}catch(e){}
-    document.body.removeChild(ta);
-  }
-  document.getElementById('copyLine').addEventListener('click',function(){copy(fmtLine(),this);});
-  document.getElementById('copyHtml').addEventListener('click',function(){copy(fmtHtml(),this);});
+  loadEvents();
 })();
 </script>
 </body>
