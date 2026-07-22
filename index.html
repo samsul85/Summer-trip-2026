@@ -114,6 +114,8 @@
   .tag.travel{background:var(--ochre-soft);color:var(--ochre)}
   .tag.home{background:var(--teal-soft);color:var(--teal)}
   .tag.resort{background:var(--clay-soft);color:var(--clay)}
+  .tag.event{background:var(--clay-soft);color:var(--clay)}
+  .plan .row.ev-row .when{color:var(--clay)}
 
   /* Packing */
   .cols{display:grid;grid-template-columns:1fr 1fr;gap:22px}
@@ -234,12 +236,12 @@
   <section>
     <h2>Plans &amp; notes</h2>
     <p class="sub">Day-by-day outline of the trip.</p>
-    <div class="plan">
-      <div class="row"><div class="when">Aug 8&ndash;10</div><div class="what"><span class="tag travel">Travel</span> Travel days &mdash; depart Saturday, Aug 8; arrive at home base Monday, Aug 10.</div></div>
-      <div class="row"><div class="when">Aug 11&ndash;25</div><div class="what"><span class="tag home">Home base</span> Settling in at home base &mdash; relaxed days, local outings, and family time.</div></div>
-      <div class="row"><div class="when">Aug 26&ndash;28</div><div class="what"><span class="tag resort">Resort stay</span> Three nights at the resort stay (Wed&ndash;Fri).</div></div>
-      <div class="row"><div class="when">Aug 29 &ndash; Sep 9</div><div class="what"><span class="tag home">Home base</span> Back at home base for the second stretch &mdash; more of the good stuff.</div></div>
-      <div class="row"><div class="when">Sep 10</div><div class="what"><span class="tag travel">Travel</span> Fly home Thursday, Sep 10.</div></div>
+    <div class="plan" id="planList">
+      <div class="row" data-sort="2026-08-08"><div class="when">Aug 8&ndash;10</div><div class="what"><span class="tag travel">Travel</span> Travel days &mdash; depart Saturday, Aug 8; arrive at home base Monday, Aug 10.</div></div>
+      <div class="row" data-sort="2026-08-11"><div class="when">Aug 11&ndash;25</div><div class="what"><span class="tag home">Home base</span> Settling in at home base &mdash; relaxed days, local outings, and family time.</div></div>
+      <div class="row" data-sort="2026-08-26"><div class="when">Aug 26&ndash;28</div><div class="what"><span class="tag resort">Resort stay</span> Three nights at the resort stay (Wed&ndash;Fri).</div></div>
+      <div class="row" data-sort="2026-08-29"><div class="when">Aug 29 &ndash; Sep 9</div><div class="what"><span class="tag home">Home base</span> Back at home base for the second stretch &mdash; more of the good stuff.</div></div>
+      <div class="row" data-sort="2026-09-10"><div class="when">Sep 10</div><div class="what"><span class="tag travel">Travel</span> Fly home Thursday, Sep 10.</div></div>
     </div>
   </section>
 
@@ -376,6 +378,36 @@
     });
   }
 
+  // Merge events into the Plans & notes list, in date order among the phase rows.
+  function renderPlans(){
+    var container=document.getElementById('planList');
+    if(!container) return;
+    // clear previously injected event rows
+    Array.prototype.slice.call(container.querySelectorAll('.row.ev-row')).forEach(function(r){r.remove();});
+    // sort events by day, then by time text
+    var sorted=events.slice().sort(function(a,b){
+      if(a.day!==b.day) return a.day<b.day?-1:1;
+      return (a.time||'').localeCompare(b.time||'');
+    });
+    sorted.forEach(function(e){
+      var parts=e.day.split('-');
+      var mLabel=MONTHS[parseInt(parts[1],10)-1].slice(0,3)+' '+parseInt(parts[2],10);
+      var row=document.createElement('div');
+      row.className='row ev-row';
+      row.setAttribute('data-sort',e.day);
+      row.innerHTML='<div class="when">'+mLabel+'</div><div class="what">'+
+        '<span class="tag event">Event</span> '+
+        (e.time? '<strong>'+esc(e.time)+':</strong> ':'')+esc(e.title)+'</div>';
+      // insert before the first row whose sort date is strictly later
+      var rows=container.querySelectorAll('.row');
+      var placed=false;
+      for(var i=0;i<rows.length;i++){
+        if(rows[i].getAttribute('data-sort')>e.day){ container.insertBefore(row,rows[i]); placed=true; break; }
+      }
+      if(!placed) container.appendChild(row);
+    });
+  }
+
   function eventsForCurrent(){
     var k=keyOf(current.y,current.m,current.d);
     return events.filter(function(e){return e.day===k;});
@@ -414,6 +446,7 @@
     return fetch(API).then(function(r){return r.json();}).then(function(data){
       events=(data && data.events)||[];
       renderDots();
+      renderPlans();
       if(back.classList.contains('open')) renderList();
     }).catch(function(){ /* offline / not deployed yet — page still works read-only */ });
   }
@@ -435,7 +468,7 @@
         if(!res.ok){ setStatus(res.body.error||'Could not save.','err'); return; }
         events.push(res.body.event);
         evTitle.value=''; evTime.value='';
-        renderList(); renderDots();
+        renderList(); renderDots(); renderPlans();
         setStatus('Saved!','ok');
         evTitle.focus();
       }).catch(function(){ setStatus('Network error — try again.','err'); })
@@ -453,7 +486,7 @@
       .then(function(res){
         if(!res.ok){ setStatus(res.body.error||'Could not delete.','err'); return; }
         events=events.filter(function(e){return e.id!==id;});
-        renderList(); renderDots();
+        renderList(); renderDots(); renderPlans();
         setStatus('Deleted.','ok');
       }).catch(function(){ setStatus('Network error — try again.','err'); });
   }
