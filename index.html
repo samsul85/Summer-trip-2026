@@ -130,6 +130,27 @@
     border:1.5px solid var(--ochre);background:transparent;
   }
 
+  /* Editable lists (wish list, to-do, checklist) */
+  .listcard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 20px}
+  .listcard ul{list-style:none;margin:0;padding:0}
+  .litem{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px dashed var(--line)}
+  .litem:last-of-type{border-bottom:0}
+  .litem .ck{flex:0 0 auto;width:20px;height:20px;border-radius:5px;border:1.5px solid var(--teal);background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
+  .litem .ck.on{background:var(--teal);border-color:var(--teal)}
+  .litem .ck.on::after{content:"✓";color:#fff;font-size:.8rem;line-height:1}
+  .litem .txt{flex:1;color:var(--ink);font-size:.97rem;background:transparent;border:0;padding:2px 0;font-family:inherit}
+  .litem .txt[readonly]{cursor:default}
+  .litem.done .txt{text-decoration:line-through;color:var(--ink-soft)}
+  .litem .x{flex:0 0 auto;border:0;background:transparent;color:var(--clay);font-size:1.15rem;line-height:1;cursor:pointer;padding:2px 6px;border-radius:6px;opacity:.7}
+  .litem .x:hover{opacity:1;background:var(--clay-soft)}
+  .addrow{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;align-items:center}
+  .addrow input.newtxt{flex:1;min-width:160px;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);font-size:.97rem;font-family:inherit}
+  .addrow input.newtxt:focus{outline:2px solid var(--teal);outline-offset:1px}
+  .listempty{color:var(--ink-soft);font-style:italic;padding:8px 0}
+  .liststatus{font-size:.82rem;margin-top:8px;min-height:1.1em;color:var(--ink-soft)}
+  .liststatus.err{color:var(--clay)} .liststatus.ok{color:var(--teal)}
+  .passnote{font-size:.8rem;color:var(--ink-soft);margin:8px 0 0}
+
   footer{margin:48px 0 0;padding-top:20px;border-top:1px solid var(--line);color:var(--ink-soft);font-size:.85rem;text-align:center}
 
   /* Clickable days */
@@ -243,6 +264,13 @@
       <div class="row" data-sort="2026-08-29"><div class="when">Aug 29 &ndash; Sep 9</div><div class="what"><span class="tag home">Home base</span> Back at home base for the second stretch &mdash; more of the good stuff.</div></div>
       <div class="row" data-sort="2026-09-10"><div class="when">Sep 10</div><div class="what"><span class="tag travel">Travel</span> Fly home Thursday, Sep 10.</div></div>
     </div>
+  </section>
+
+  <!-- WISH LIST -->
+  <section>
+    <h2>Wish list</h2>
+    <p class="sub">Things we&rsquo;d love to do or see on the trip &mdash; add yours.</p>
+    <div class="listcard" data-list="wishlist" data-checkable="false" data-editable="false"></div>
   </section>
 
   <!-- PACKING -->
@@ -513,6 +541,120 @@
   document.addEventListener('keydown',function(e){ if(e.key==='Escape') close(); });
 
   loadEvents();
+})();
+</script>
+
+<script>
+// Reusable shared-list widget: powers Wish list, To-do list, and the packing checklist.
+// Each <div class="listcard" data-list="NAME" data-checkable data-editable> becomes a live list.
+(function(){
+  var API='/api/items';
+  var PASS_KEY='tripEditPass';
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function getPass(force){
+    var p=localStorage.getItem(PASS_KEY)||'';
+    if(force||!p){
+      p=window.prompt('Family passcode (needed to make changes):', force?'':p)||'';
+      if(p) localStorage.setItem(PASS_KEY,p);
+    }
+    return p;
+  }
+  function badPass(){ localStorage.removeItem(PASS_KEY); }
+
+  function makeList(card){
+    var name=card.getAttribute('data-list');
+    var checkable=card.getAttribute('data-checkable')==='true';
+    var editable=card.getAttribute('data-editable')==='true';
+    var items=[];
+
+    var ul=document.createElement('ul');
+    var empty=document.createElement('div'); empty.className='listempty'; empty.textContent='Nothing here yet.';
+    var addrow=document.createElement('div'); addrow.className='addrow';
+    var input=document.createElement('input'); input.type='text'; input.className='newtxt'; input.placeholder='Add an item…'; input.maxLength=200;
+    var addbtn=document.createElement('button'); addbtn.type='button'; addbtn.className='btn primary'; addbtn.textContent='Add';
+    addrow.appendChild(input); addrow.appendChild(addbtn);
+    var status=document.createElement('div'); status.className='liststatus';
+    card.appendChild(empty); card.appendChild(ul); card.appendChild(addrow); card.appendChild(status);
+
+    function setStatus(msg,kind){ status.textContent=msg||''; status.className='liststatus'+(kind?' '+kind:''); }
+
+    function render(){
+      ul.innerHTML='';
+      empty.hidden=items.length>0;
+      items.forEach(function(it){
+        var li=document.createElement('li'); li.className='litem'+(it.done?' done':'');
+        if(checkable){
+          var ck=document.createElement('button'); ck.type='button'; ck.className='ck'+(it.done?' on':'');
+          ck.setAttribute('aria-label', it.done?'Mark not done':'Mark done');
+          ck.addEventListener('click',function(){ toggle(it); });
+          li.appendChild(ck);
+        }
+        var txt=document.createElement('input'); txt.className='txt'; txt.value=it.text; txt.readOnly=!editable;
+        if(editable){
+          txt.addEventListener('change',function(){ var v=txt.value.trim(); if(v && v!==it.text) edit(it,v,txt); else txt.value=it.text; });
+          txt.addEventListener('keydown',function(e){ if(e.key==='Enter') txt.blur(); });
+        }
+        li.appendChild(txt);
+        var x=document.createElement('button'); x.type='button'; x.className='x'; x.innerHTML='&times;'; x.title='Delete';
+        x.addEventListener('click',function(){ remove(it); });
+        li.appendChild(x);
+        ul.appendChild(li);
+      });
+    }
+
+    function load(){
+      fetch(API+'?list='+encodeURIComponent(name)).then(function(r){return r.json();}).then(function(d){
+        items=(d && d.items)||[]; render();
+      }).catch(function(){ setStatus('Could not load — refresh to retry.','err'); });
+    }
+
+    function write(opts){
+      var pass=getPass(opts.force); if(!pass){ setStatus('Passcode needed to save.','err'); return; }
+      var init={method:opts.method,headers:{'x-edit-pass':pass}};
+      if(opts.body){ init.headers['Content-Type']='application/json'; init.body=JSON.stringify(opts.body); }
+      var url=API+(opts.query||'');
+      setStatus('Saving…');
+      return fetch(url,init).then(function(r){return r.json().then(function(b){return {ok:r.ok,status:r.status,body:b};});})
+        .then(function(res){
+          if(res.status===401){ badPass(); setStatus('Wrong passcode — try again.','err'); return null; }
+          if(!res.ok){ setStatus((res.body&&res.body.error)||'Could not save.','err'); return null; }
+          setStatus('');
+          return res.body;
+        }).catch(function(){ setStatus('Network error — try again.','err'); return null; });
+    }
+
+    function add(){
+      var text=input.value.trim();
+      if(!text){ input.focus(); return; }
+      addbtn.disabled=true;
+      write({method:'POST',body:{list:name,text:text}}).then(function(b){
+        addbtn.disabled=false;
+        if(b && b.item){ items.push(b.item); input.value=''; render(); input.focus(); }
+      });
+    }
+    function toggle(it){
+      write({method:'PATCH',body:{id:it.id,done:!it.done}}).then(function(b){
+        if(b && b.item){ it.done=b.item.done; render(); }
+      });
+    }
+    function edit(it,newText,txtEl){
+      write({method:'PATCH',body:{id:it.id,text:newText}}).then(function(b){
+        if(b && b.item){ it.text=b.item.text; } else if(txtEl){ txtEl.value=it.text; }
+        render();
+      });
+    }
+    function remove(it){
+      write({method:'DELETE',query:'?id='+encodeURIComponent(it.id)}).then(function(b){
+        if(b && b.ok){ items=items.filter(function(x){return x.id!==it.id;}); render(); }
+      });
+    }
+
+    addbtn.addEventListener('click',add);
+    input.addEventListener('keydown',function(e){ if(e.key==='Enter') add(); });
+    load();
+  }
+
+  Array.prototype.slice.call(document.querySelectorAll('.listcard[data-list]')).forEach(makeList);
 })();
 </script>
 </body>
