@@ -26,6 +26,8 @@ export default async function handler(req, res) {
         created_at TIMESTAMPTZ DEFAULT now()
       )`;
 
+    await seedPackingOnce();
+
     if (req.method === 'GET') {
       const list = (req.query.list || '').trim();
       if (list) {
@@ -99,5 +101,58 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed.' });
   } catch (e) {
     return res.status(500).json({ error: 'Server error.', detail: String((e && e.message) || e) });
+  }
+}
+
+// Default packing items, seeded into the DB exactly once (safe under concurrent requests).
+const PACKING_DEFAULTS = {
+  'pack:documents': [
+    'Travel documents for everyone',
+    'Boarding passes / booking confirmations',
+    'Payment cards & some local cash',
+    'Travel insurance details',
+    'Copies of key documents (paper + phone)',
+    'Emergency contact list',
+  ],
+  'pack:clothing': [
+    'Everyday outfits for two-plus weeks',
+    'Light layers & a warm option for evenings',
+    'Comfortable walking shoes',
+    'Rain jacket / umbrella',
+    'Sleepwear & underclothes',
+    'Laundry bag',
+  ],
+  'pack:health': [
+    'Regular medications & a small first-aid kit',
+    'Sunscreen & after-sun',
+    'Toothbrushes, toothpaste, soap, shampoo',
+    'Insect repellent',
+    'Hand sanitizer & wipes',
+    'Reusable water bottles',
+  ],
+  'pack:kids': [
+    'Swimwear & towels for the resort stay',
+    'Hats & sunglasses for everyone',
+    'Snacks & travel-day entertainment',
+    'Chargers, headphones & a power bank',
+    'Small day bag / backpack',
+    'Comfort items for the little ones',
+  ],
+};
+
+async function seedPackingOnce() {
+  await sql`CREATE TABLE IF NOT EXISTS app_meta (key TEXT PRIMARY KEY, val TEXT)`;
+  // Only the request that actually inserts this flag row proceeds to seed —
+  // ON CONFLICT DO NOTHING makes this atomic, so no duplicate seeding.
+  const claim = await sql`
+    INSERT INTO app_meta (key, val) VALUES ('packing_seeded', '1')
+    ON CONFLICT (key) DO NOTHING
+    RETURNING key`;
+  if (claim.rowCount === 0) return; // already seeded by someone else
+
+  for (const list of Object.keys(PACKING_DEFAULTS)) {
+    for (const text of PACKING_DEFAULTS[list]) {
+      await sql`INSERT INTO list_items (list, text) VALUES (${list}, ${text})`;
+    }
   }
 }

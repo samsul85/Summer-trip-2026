@@ -132,6 +132,7 @@
 
   /* Editable lists (wish list, to-do, checklist) */
   .listcard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 20px}
+  .listcard h3{margin:2px 0 8px;font-size:1.1rem;color:var(--teal)}
   .listcard ul{list-style:none;margin:0;padding:0}
   .litem{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px dashed var(--line)}
   .litem:last-of-type{border-bottom:0}
@@ -280,51 +281,19 @@
   <!-- PACKING -->
   <section>
     <h2>Packing checklist</h2>
-    <p class="sub">A generic starting point &mdash; adjust as needed.</p>
+    <p class="sub">Tick items off, edit them, or add your own. Shared with everyone.</p>
     <div class="cols">
-      <div class="pack">
+      <div class="listcard" data-list="pack:documents" data-checkable="true" data-editable="true">
         <h3>Documents &amp; money</h3>
-        <ul>
-          <li>Travel documents for everyone</li>
-          <li>Boarding passes / booking confirmations</li>
-          <li>Payment cards &amp; some local cash</li>
-          <li>Travel insurance details</li>
-          <li>Copies of key documents (paper + phone)</li>
-          <li>Emergency contact list</li>
-        </ul>
       </div>
-      <div class="pack">
+      <div class="listcard" data-list="pack:clothing" data-checkable="true" data-editable="true">
         <h3>Clothing</h3>
-        <ul>
-          <li>Everyday outfits for two-plus weeks</li>
-          <li>Light layers &amp; a warm option for evenings</li>
-          <li>Comfortable walking shoes</li>
-          <li>Rain jacket / umbrella</li>
-          <li>Sleepwear &amp; underclothes</li>
-          <li>Laundry bag</li>
-        </ul>
       </div>
-      <div class="pack">
+      <div class="listcard" data-list="pack:health" data-checkable="true" data-editable="true">
         <h3>Health &amp; toiletries</h3>
-        <ul>
-          <li>Regular medications &amp; a small first-aid kit</li>
-          <li>Sunscreen &amp; after-sun</li>
-          <li>Toothbrushes, toothpaste, soap, shampoo</li>
-          <li>Insect repellent</li>
-          <li>Hand sanitizer &amp; wipes</li>
-          <li>Reusable water bottles</li>
-        </ul>
       </div>
-      <div class="pack">
+      <div class="listcard" data-list="pack:kids" data-checkable="true" data-editable="true">
         <h3>Kids &amp; resort days</h3>
-        <ul>
-          <li>Swimwear &amp; towels for the resort stay</li>
-          <li>Hats &amp; sunglasses for everyone</li>
-          <li>Snacks &amp; travel-day entertainment</li>
-          <li>Chargers, headphones &amp; a power bank</li>
-          <li>Small day bag / backpack</li>
-          <li>Comfort items for the little ones</li>
-        </ul>
       </div>
     </div>
   </section>
