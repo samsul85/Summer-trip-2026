@@ -102,7 +102,9 @@
   .day.empty{visibility:hidden}
   .day.travel{background:var(--teal-soft);color:var(--teal);font-weight:700;box-shadow:inset 0 0 0 1px var(--teal)}
   .day.home,.day.resort{background:transparent;color:var(--ink);font-weight:400;box-shadow:none}
-  .day .evdot{position:absolute;bottom:4px;left:50%;transform:translateX(-50%);width:6px;height:6px;border-radius:50%;background:var(--clay);box-shadow:0 0 0 2px var(--card)}
+  .day .evdot-wrap{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);display:inline-flex;align-items:center;gap:2px;line-height:1;pointer-events:none}
+  .day .evdot{width:6px;height:6px;border-radius:50%;background:var(--clay);box-shadow:0 0 0 2px var(--card)}
+  .day .evcount{font-size:.6rem;font-weight:800;color:var(--clay);line-height:1}
 
   /* Plans */
   .plan{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:8px 22px}
@@ -166,7 +168,8 @@
   .modal h3{margin:0 0 2px;font-size:1.3rem;color:var(--teal)}
   .modal .m-date{margin:0 0 14px;color:var(--ink-soft);font-size:.92rem}
   .modal label{display:block;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);font-weight:600;margin:12px 0 5px}
-  .modal input[type=text],.modal input[type=password]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);font-size:1rem;font-family:inherit}
+  .modal input[type=text],.modal input[type=password],.modal input[type=date]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);font-size:1rem;font-family:inherit}
+  .modal input[type=date]{color-scheme:light dark}
   .modal input:focus{outline:2px solid var(--teal);outline-offset:1px}
   .modal .btns{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
   .btn{border:0;border-radius:9px;padding:10px 16px;font-size:.92rem;font-weight:600;cursor:pointer;font-family:inherit}
@@ -321,6 +324,9 @@
     <label for="evTime">Time (optional)</label>
     <input type="text" id="evTime" placeholder="e.g. 2:00 PM" autocomplete="off" maxlength="40">
 
+    <label for="evEnd">Ends (optional &mdash; for multi-day events)</label>
+    <input type="date" id="evEnd" min="2026-08-01" max="2026-09-30">
+
     <label for="evPass">Family passcode</label>
     <input type="password" id="evPass" placeholder="Required to save or delete" autocomplete="off">
 
@@ -345,6 +351,7 @@
   var evEmpty=document.getElementById('evEmpty');
   var evTitle=document.getElementById('evTitle');
   var evTime=document.getElementById('evTime');
+  var evEnd=document.getElementById('evEnd');
   var evPass=document.getElementById('evPass');
   var statusEl=document.getElementById('status');
   var saveBtn=document.getElementById('saveBtn');
@@ -356,6 +363,25 @@
   function keyOf(y,m,d){return y+'-'+pad(m)+'-'+pad(d);}
   function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 
+  // --- multi-day event helpers (day keys are sortable YYYY-MM-DD strings) ---
+  function endOf(e){ return (e.end && e.end>=e.day) ? e.end : e.day; }
+  function coversDay(e,k){ return k>=e.day && k<=endOf(e); }
+  function eachDay(startISO,endISO,cb){
+    var s=startISO.split('-'), e=(endISO||startISO).split('-');
+    var cur=new Date(+s[0],+s[1]-1,+s[2]);
+    var stop=new Date(+e[0],+e[1]-1,+e[2]);
+    var guard=0;
+    while(cur<=stop && guard<400){ cb(keyOf(cur.getFullYear(),cur.getMonth()+1,cur.getDate())); cur.setDate(cur.getDate()+1); guard++; }
+  }
+  function rangeLabel(startISO,endISO){
+    var s=startISO.split('-'), lbl=MONTHS[+s[1]-1].slice(0,3)+' '+(+s[2]);
+    if(endISO && endISO!==startISO){
+      var e=endISO.split('-');
+      lbl += (e[1]===s[1]) ? '&ndash;'+(+e[2]) : '&ndash;'+MONTHS[+e[1]-1].slice(0,3)+' '+(+e[2]);
+    }
+    return lbl;
+  }
+
   function setStatus(msg,kind){ statusEl.textContent=msg||''; statusEl.className='status'+(kind?' '+kind:''); }
 
   function dayCells(){
@@ -363,19 +389,24 @@
       .filter(function(c){return !c.classList.contains('empty') && c.firstChild;});
   }
 
-  // Paint a small dot on every day that has at least one event.
+  // Paint a red dot on every day an event covers; add a red count if 2+ events land on it.
   function renderDots(){
     var counts={};
-    events.forEach(function(e){ counts[e.day]=(counts[e.day]||0)+1; });
+    events.forEach(function(e){ eachDay(e.day, endOf(e), function(k){ counts[k]=(counts[k]||0)+1; }); });
     dayCells().forEach(function(cell){
       var tbl=cell.closest('table');
       var y=parseInt(tbl.getAttribute('data-year'),10);
       var m=parseInt(tbl.getAttribute('data-month'),10);
       var d=parseInt(cell.textContent.replace(/\D+/g,''),10);
-      var existing=cell.querySelector('.evdot');
-      if(counts[keyOf(y,m,d)]){
-        if(!existing){ var s=document.createElement('span'); s.className='evdot'; cell.appendChild(s); }
-      } else if(existing){ existing.remove(); }
+      var existing=cell.querySelector('.evdot-wrap');
+      if(existing) existing.remove();
+      var n=counts[keyOf(y,m,d)]||0;
+      if(n>0){
+        var wrap=document.createElement('span'); wrap.className='evdot-wrap';
+        var dot=document.createElement('span'); dot.className='evdot'; wrap.appendChild(dot);
+        if(n>=2){ var cnt=document.createElement('span'); cnt.className='evcount'; cnt.textContent=n; wrap.appendChild(cnt); }
+        cell.appendChild(wrap);
+      }
     });
   }
 
@@ -391,8 +422,7 @@
       return (a.time||'').localeCompare(b.time||'');
     });
     sorted.forEach(function(e){
-      var parts=e.day.split('-');
-      var mLabel=MONTHS[parseInt(parts[1],10)-1].slice(0,3)+' '+parseInt(parts[2],10);
+      var mLabel=rangeLabel(e.day, endOf(e));
       var row=document.createElement('div');
       row.className='row ev-row';
       row.setAttribute('data-sort',e.day);
@@ -411,7 +441,7 @@
 
   function eventsForCurrent(){
     var k=keyOf(current.y,current.m,current.d);
-    return events.filter(function(e){return e.day===k;});
+    return events.filter(function(e){return coversDay(e,k);});
   }
 
   function renderList(){
@@ -421,7 +451,8 @@
     list.forEach(function(e){
       var li=document.createElement('li');
       var span=document.createElement('span');
-      span.innerHTML=(e.time? '<span class="etime">'+esc(e.time)+'</span>':'')+esc(e.title);
+      var rangeTxt=(e.end && e.end!==e.day)? ' <span class="etime">'+rangeLabel(e.day,e.end)+'</span>':'';
+      span.innerHTML=(e.time? '<span class="etime">'+esc(e.time)+'</span>':'')+esc(e.title)+rangeTxt;
       var del=document.createElement('button');
       del.className='del'; del.type='button'; del.textContent='Delete';
       del.addEventListener('click',function(){ removeEvent(e.id); });
@@ -434,7 +465,8 @@
     current={y:y,m:m,d:d};
     var wd=new Date(y,m-1,d).getDay();
     mDate.textContent=WEEKDAYS[wd]+', '+MONTHS[m-1]+' '+d+', '+y;
-    evTitle.value=''; evTime.value='';
+    evTitle.value=''; evTime.value=''; evEnd.value='';
+    evEnd.min=keyOf(y,m,d);
     evPass.value=localStorage.getItem('tripEditPass')||'';
     setStatus('');
     renderList();
@@ -455,20 +487,23 @@
   function saveEvent(){
     var title=evTitle.value.trim();
     var time=evTime.value.trim();
+    var end=evEnd.value.trim();
+    var start=keyOf(current.y,current.m,current.d);
     var pass=evPass.value;
     if(!title){ setStatus('Enter an event first.','err'); evTitle.focus(); return; }
+    if(end && end<start){ setStatus('End date must be on or after this day.','err'); evEnd.focus(); return; }
     if(!pass){ setStatus('Enter the family passcode.','err'); evPass.focus(); return; }
     localStorage.setItem('tripEditPass',pass);
     saveBtn.disabled=true; setStatus('Saving…');
     fetch(API,{
       method:'POST',
       headers:{'Content-Type':'application/json','x-edit-pass':pass},
-      body:JSON.stringify({day:keyOf(current.y,current.m,current.d),title:title,time:time})
+      body:JSON.stringify({day:start,end:end,title:title,time:time})
     }).then(function(r){return r.json().then(function(b){return {ok:r.ok,body:b};});})
       .then(function(res){
         if(!res.ok){ setStatus(res.body.error||'Could not save.','err'); return; }
         events.push(res.body.event);
-        evTitle.value=''; evTime.value='';
+        evTitle.value=''; evTime.value=''; evEnd.value='';
         renderList(); renderDots(); renderPlans();
         setStatus('Saved!','ok');
         evTitle.focus();
