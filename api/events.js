@@ -26,11 +26,13 @@ export default async function handler(req, res) {
       )`;
     // Optional end date for multi-day events (added after initial launch).
     await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS end_day DATE`;
+    // Optional free-text notes per event.
+    await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS notes TEXT`;
 
     if (req.method === 'GET') {
       const { rows } = await sql`
         SELECT id, to_char(day, 'YYYY-MM-DD') AS day,
-               to_char(end_day, 'YYYY-MM-DD') AS end, title, time
+               to_char(end_day, 'YYYY-MM-DD') AS end, title, time, notes
         FROM events
         ORDER BY day ASC, time ASC NULLS FIRST, id ASC`;
       return res.status(200).json({ events: rows });
@@ -51,6 +53,7 @@ export default async function handler(req, res) {
       const day = (body.day || '').trim();
       const title = (body.title || '').trim();
       const time = (body.time || '').trim() || null;
+      const notes = (body.notes || '').trim() || null;
       let end = (body.end || '').trim() || null;
 
       if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) {
@@ -66,12 +69,13 @@ export default async function handler(req, res) {
       if (!title) return res.status(400).json({ error: 'Event text is required.' });
       if (title.length > 200) return res.status(400).json({ error: 'Event text is too long (max 200 chars).' });
       if (time && time.length > 40) return res.status(400).json({ error: 'Time is too long.' });
+      if (notes && notes.length > 1000) return res.status(400).json({ error: 'Notes are too long (max 1000 chars).' });
 
       const { rows } = await sql`
-        INSERT INTO events (day, end_day, title, time)
-        VALUES (${day}, ${end}, ${title}, ${time})
+        INSERT INTO events (day, end_day, title, time, notes)
+        VALUES (${day}, ${end}, ${title}, ${time}, ${notes})
         RETURNING id, to_char(day, 'YYYY-MM-DD') AS day,
-                  to_char(end_day, 'YYYY-MM-DD') AS end, title, time`;
+                  to_char(end_day, 'YYYY-MM-DD') AS end, title, time, notes`;
       return res.status(201).json({ event: rows[0] });
     }
 

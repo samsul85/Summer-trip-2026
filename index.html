@@ -118,6 +118,7 @@
   .tag.resort{background:var(--clay-soft);color:var(--clay)}
   .tag.event{background:var(--clay-soft);color:var(--clay)}
   .plan .row.ev-row .when{color:var(--clay)}
+  .plan .what .enote{display:block;margin-top:4px;color:var(--ink-soft);font-size:.85rem;white-space:pre-wrap}
 
   /* Packing */
   .cols{display:grid;grid-template-columns:1fr 1fr;gap:22px}
@@ -168,7 +169,8 @@
   .modal h3{margin:0 0 2px;font-size:1.3rem;color:var(--teal)}
   .modal .m-date{margin:0 0 14px;color:var(--ink-soft);font-size:.92rem}
   .modal label{display:block;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);font-weight:600;margin:12px 0 5px}
-  .modal input[type=text],.modal input[type=password],.modal input[type=date]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);font-size:1rem;font-family:inherit}
+  .modal input[type=text],.modal input[type=password],.modal input[type=date],.modal textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);font-size:1rem;font-family:inherit}
+  .modal textarea{resize:vertical;min-height:60px;line-height:1.4}
   .modal input[type=date]{color-scheme:light dark}
   .modal input:focus{outline:2px solid var(--teal);outline-offset:1px}
   .modal .btns{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
@@ -179,9 +181,10 @@
   .btn[disabled]{opacity:.5;cursor:default}
 
   .evlist{margin:4px 0 0;padding:0;list-style:none}
-  .evlist li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:.92rem;color:var(--ink)}
+  .evlist li{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:.92rem;color:var(--ink)}
   .evlist li:last-child{border-bottom:0}
   .evlist .etime{color:var(--teal);font-weight:700;margin-right:6px}
+  .evlist .enote{display:block;margin-top:3px;color:var(--ink-soft);font-size:.85rem;white-space:pre-wrap}
   .evlist .del{background:none;border:0;color:var(--clay);cursor:pointer;font-size:.8rem;font-weight:700;padding:2px 4px}
   .evempty{color:var(--ink-soft);font-size:.9rem;font-style:italic;padding:6px 0 2px}
   .divider{height:1px;background:var(--line);margin:16px 0}
@@ -327,6 +330,9 @@
     <label for="evEnd">Ends (optional &mdash; for multi-day events)</label>
     <input type="date" id="evEnd" min="2026-08-01" max="2026-09-30">
 
+    <label for="evNotes">Notes (optional)</label>
+    <textarea id="evNotes" rows="3" placeholder="Any details to remember…" maxlength="1000"></textarea>
+
     <label for="evPass">Family passcode</label>
     <input type="password" id="evPass" placeholder="Required to save or delete" autocomplete="off">
 
@@ -352,6 +358,7 @@
   var evTitle=document.getElementById('evTitle');
   var evTime=document.getElementById('evTime');
   var evEnd=document.getElementById('evEnd');
+  var evNotes=document.getElementById('evNotes');
   var evPass=document.getElementById('evPass');
   var statusEl=document.getElementById('status');
   var saveBtn=document.getElementById('saveBtn');
@@ -428,7 +435,8 @@
       row.setAttribute('data-sort',e.day);
       row.innerHTML='<div class="when">'+mLabel+'</div><div class="what">'+
         '<span class="tag event">Event</span> '+
-        (e.time? '<strong>'+esc(e.time)+':</strong> ':'')+esc(e.title)+'</div>';
+        (e.time? '<strong>'+esc(e.time)+':</strong> ':'')+esc(e.title)+
+        (e.notes? '<span class="enote">'+esc(e.notes)+'</span>':'')+'</div>';
       // insert before the first row whose sort date is strictly later
       var rows=container.querySelectorAll('.row');
       var placed=false;
@@ -452,7 +460,8 @@
       var li=document.createElement('li');
       var span=document.createElement('span');
       var rangeTxt=(e.end && e.end!==e.day)? ' <span class="etime">'+rangeLabel(e.day,e.end)+'</span>':'';
-      span.innerHTML=(e.time? '<span class="etime">'+esc(e.time)+'</span>':'')+esc(e.title)+rangeTxt;
+      var noteTxt=e.notes? '<span class="enote">'+esc(e.notes)+'</span>':'';
+      span.innerHTML=(e.time? '<span class="etime">'+esc(e.time)+'</span>':'')+esc(e.title)+rangeTxt+noteTxt;
       var del=document.createElement('button');
       del.className='del'; del.type='button'; del.textContent='Delete';
       del.addEventListener('click',function(){ removeEvent(e.id); });
@@ -465,7 +474,7 @@
     current={y:y,m:m,d:d};
     var wd=new Date(y,m-1,d).getDay();
     mDate.textContent=WEEKDAYS[wd]+', '+MONTHS[m-1]+' '+d+', '+y;
-    evTitle.value=''; evTime.value=''; evEnd.value='';
+    evTitle.value=''; evTime.value=''; evEnd.value=''; evNotes.value='';
     evEnd.min=keyOf(y,m,d);
     evPass.value=localStorage.getItem('tripEditPass')||'';
     setStatus('');
@@ -488,6 +497,7 @@
     var title=evTitle.value.trim();
     var time=evTime.value.trim();
     var end=evEnd.value.trim();
+    var notes=evNotes.value.trim();
     var start=keyOf(current.y,current.m,current.d);
     var pass=evPass.value;
     if(!title){ setStatus('Enter an event first.','err'); evTitle.focus(); return; }
@@ -498,12 +508,12 @@
     fetch(API,{
       method:'POST',
       headers:{'Content-Type':'application/json','x-edit-pass':pass},
-      body:JSON.stringify({day:start,end:end,title:title,time:time})
+      body:JSON.stringify({day:start,end:end,title:title,time:time,notes:notes})
     }).then(function(r){return r.json().then(function(b){return {ok:r.ok,body:b};});})
       .then(function(res){
         if(!res.ok){ setStatus(res.body.error||'Could not save.','err'); return; }
         events.push(res.body.event);
-        evTitle.value=''; evTime.value=''; evEnd.value='';
+        evTitle.value=''; evTime.value=''; evEnd.value=''; evNotes.value='';
         renderList(); renderDots(); renderPlans();
         setStatus('Saved!','ok');
         evTitle.focus();
