@@ -29,6 +29,15 @@ export default async function handler(req, res) {
     await seedPackingOnce();
 
     if (req.method === 'GET') {
+      // View gate: reading requires a passcode (VIEW_PASSCODE, or EDIT_PASSCODE
+      // as a fallback). If neither is set, reading stays open.
+      const viewExpected = process.env.VIEW_PASSCODE || process.env.EDIT_PASSCODE;
+      if (viewExpected) {
+        const viewProvided = req.headers['x-view-pass'] || req.query.view || '';
+        if (viewProvided !== viewExpected) {
+          return res.status(401).json({ error: 'View passcode required.', locked: true });
+        }
+      }
       const list = (req.query.list || '').trim();
       if (list) {
         const { rows } = await sql`

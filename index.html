@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Summer Trip 2026 Libya</title>
+<script>if(!localStorage.getItem('tripViewPass'))document.documentElement.classList.add('locked');</script>
 <style>
   :root{
     --sand:#f4ecd9;
@@ -162,6 +163,19 @@
   .day:not(.empty):hover{transform:translateY(-1px);box-shadow:inset 0 0 0 2px var(--teal)}
   .day.travel:hover{box-shadow:inset 0 0 0 2px var(--teal)}
 
+  /* Lock screen (view passcode) */
+  .lock{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;padding:22px;
+    background:radial-gradient(1000px 500px at 50% -10%, rgba(31,122,112,.18), transparent 60%),var(--sand)}
+  html.locked .lock{display:flex}
+  html.locked body{overflow:hidden}
+  .lockcard{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);max-width:400px;width:100%;padding:32px 28px;text-align:center}
+  .lockcard h1{font-family:Georgia,serif;margin:0 0 6px;font-size:1.7rem;color:var(--teal)}
+  .lockcard p{margin:0 0 18px;color:var(--ink-soft);font-size:.95rem}
+  .lockcard input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink);font-size:1rem;font-family:inherit;text-align:center}
+  .lockcard input:focus{outline:2px solid var(--teal);outline-offset:1px}
+  .lockcard button{margin-top:14px;width:100%;border:0;border-radius:10px;padding:12px;background:var(--teal);color:#fff;font-size:1rem;font-weight:700;cursor:pointer;font-family:inherit}
+  .lockstatus{min-height:1.1em;margin:12px 0 0 !important;font-size:.85rem;color:var(--clay)}
+
   /* Modal */
   .modal-back{position:fixed;inset:0;background:rgba(30,22,10,.5);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}
   .modal-back.open{display:flex}
@@ -194,6 +208,18 @@
 </style>
 </head>
 <body>
+
+<!-- View passcode lock screen -->
+<div class="lock" id="lockScreen">
+  <div class="lockcard">
+    <h1>Summer Trip 2026</h1>
+    <p>This calendar is private. Enter the family passcode to view.</p>
+    <input type="password" id="lockPass" placeholder="Passcode" autocomplete="current-password">
+    <button type="button" id="lockBtn">View calendar</button>
+    <p class="lockstatus" id="lockStatus"></p>
+  </div>
+</div>
+
 <div class="wrap">
 
   <header class="hero">
@@ -346,6 +372,39 @@
 </div>
 
 <script>
+// View passcode gate — reads are enforced server-side on the /api GET endpoints.
+window.tripViewPass = localStorage.getItem('tripViewPass') || '';
+(function(){
+  var input=document.getElementById('lockPass');
+  var btn=document.getElementById('lockBtn');
+  var status=document.getElementById('lockStatus');
+  var html=document.documentElement;
+
+  window.TripLock={
+    show:function(){ html.classList.add('locked'); setTimeout(function(){ if(input) input.focus(); },30); },
+    hide:function(){ html.classList.remove('locked'); }
+  };
+
+  function attempt(pass){
+    status.textContent='Checking…';
+    return fetch('/api/events',{headers:{'x-view-pass':pass}}).then(function(r){
+      if(r.ok){ localStorage.setItem('tripViewPass',pass); window.tripViewPass=pass; location.reload(); return; }
+      status.textContent='Wrong passcode — try again.'; input.value=''; input.focus();
+    }).catch(function(){ status.textContent='Network error — try again.'; });
+  }
+  btn.addEventListener('click',function(){ var p=input.value.trim(); if(p) attempt(p); });
+  input.addEventListener('keydown',function(e){ if(e.key==='Enter'){ var p=input.value.trim(); if(p) attempt(p); } });
+
+  // Verify any stored pass in the background; lock if it's no longer valid.
+  if(window.tripViewPass){
+    fetch('/api/events',{headers:{'x-view-pass':window.tripViewPass}}).then(function(r){
+      if(r.status===401){ localStorage.removeItem('tripViewPass'); window.tripViewPass=''; window.TripLock.show(); }
+    }).catch(function(){});
+  }
+})();
+</script>
+
+<script>
 (function(){
   var WEEKDAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
   var MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -485,7 +544,10 @@
   function close(){ back.classList.remove('open'); }
 
   function loadEvents(){
-    return fetch(API).then(function(r){return r.json();}).then(function(data){
+    return fetch(API,{headers:{'x-view-pass':window.tripViewPass||''}}).then(function(r){
+      if(r.status===401){ if(window.TripLock) window.TripLock.show(); return {events:[]}; }
+      return r.json();
+    }).then(function(data){
       events=(data && data.events)||[];
       renderDots();
       renderPlans();
@@ -621,7 +683,10 @@
     }
 
     function load(){
-      fetch(API+'?list='+encodeURIComponent(name)).then(function(r){return r.json();}).then(function(d){
+      fetch(API+'?list='+encodeURIComponent(name),{headers:{'x-view-pass':window.tripViewPass||''}}).then(function(r){
+        if(r.status===401){ if(window.TripLock) window.TripLock.show(); return {items:[]}; }
+        return r.json();
+      }).then(function(d){
         items=(d && d.items)||[]; render();
       }).catch(function(){ setStatus('Could not load — refresh to retry.','err'); });
     }

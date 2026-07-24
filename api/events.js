@@ -30,6 +30,15 @@ export default async function handler(req, res) {
     await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS notes TEXT`;
 
     if (req.method === 'GET') {
+      // View gate: reading requires a passcode (VIEW_PASSCODE, or the family
+      // EDIT_PASSCODE as a fallback). If neither is set, reading stays open.
+      const viewExpected = process.env.VIEW_PASSCODE || process.env.EDIT_PASSCODE;
+      if (viewExpected) {
+        const viewProvided = req.headers['x-view-pass'] || req.query.view || '';
+        if (viewProvided !== viewExpected) {
+          return res.status(401).json({ error: 'View passcode required.', locked: true });
+        }
+      }
       const { rows } = await sql`
         SELECT id, to_char(day, 'YYYY-MM-DD') AS day,
                to_char(end_day, 'YYYY-MM-DD') AS end, title, time, notes
