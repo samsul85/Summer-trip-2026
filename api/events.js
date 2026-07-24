@@ -15,6 +15,19 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
 
   try {
+    // View gate FIRST — no database needed, so unlocking never depends on a
+    // cold database waking up. The lock screen calls ?check=1 for a fast yes/no.
+    if (req.method === 'GET') {
+      const viewExpected = process.env.VIEW_PASSCODE || process.env.EDIT_PASSCODE;
+      if (viewExpected) {
+        const viewProvided = req.headers['x-view-pass'] || req.query.view || '';
+        if (viewProvided !== viewExpected) {
+          return res.status(401).json({ error: 'View passcode required.', locked: true });
+        }
+      }
+      if (req.query.check) return res.status(200).json({ ok: true }); // passcode OK, no data
+    }
+
     // Create the table on first use — safe to run every time.
     await sql`
       CREATE TABLE IF NOT EXISTS events (
@@ -30,15 +43,6 @@ export default async function handler(req, res) {
     await sql`ALTER TABLE events ADD COLUMN IF NOT EXISTS notes TEXT`;
 
     if (req.method === 'GET') {
-      // View gate: reading requires a passcode (VIEW_PASSCODE, or the family
-      // EDIT_PASSCODE as a fallback). If neither is set, reading stays open.
-      const viewExpected = process.env.VIEW_PASSCODE || process.env.EDIT_PASSCODE;
-      if (viewExpected) {
-        const viewProvided = req.headers['x-view-pass'] || req.query.view || '';
-        if (viewProvided !== viewExpected) {
-          return res.status(401).json({ error: 'View passcode required.', locked: true });
-        }
-      }
       const { rows } = await sql`
         SELECT id, to_char(day, 'YYYY-MM-DD') AS day,
                to_char(end_day, 'YYYY-MM-DD') AS end, title, time, notes
@@ -95,13 +99,15 @@ export default async function handler(req, res) {
 
       const cur = await sql`SELECT to_char(day, 'YYYY-MM-DD') AS day FROM events WHERE id = ${id}`;
       if (!cur.rows.length) return res.status(404).json({ error: 'Event not found.' });
-      const day = cur.rows[0].day; // start date is not changed by edit
 
       const title = (body.title || '').trim();
       const time = (body.time || '').trim() || null;
       const notes = (body.notes || '').trim() || null;
+      // Start date is editable; fall back to the existing one if not provided.
+      const day = (body.day || '').trim() || cur.rows[0].day;
       let end = (body.end || '').trim() || null;
 
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return res.status(400).json({ error: 'Invalid start date.' });
       if (!title) return res.status(400).json({ error: 'Event text is required.' });
       if (title.length > 200) return res.status(400).json({ error: 'Event text is too long (max 200 chars).' });
       if (time && time.length > 40) return res.status(400).json({ error: 'Time is too long.' });
@@ -113,7 +119,7 @@ export default async function handler(req, res) {
       }
 
       const { rows } = await sql`
-        UPDATE events SET title = ${title}, time = ${time}, end_day = ${end}, notes = ${notes}
+        UPDATE events SET day = ${day}, title = ${title}, time = ${time}, end_day = ${end}, notes = ${notes}
         WHERE id = ${id}
         RETURNING id, to_char(day, 'YYYY-MM-DD') AS day,
                   to_char(end_day, 'YYYY-MM-DD') AS end, title, time, notes`;

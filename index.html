@@ -355,6 +355,9 @@
     <label for="evTime">Time (optional)</label>
     <input type="text" id="evTime" placeholder="e.g. 2:00 PM" autocomplete="off" maxlength="40">
 
+    <label for="evStart">Starts</label>
+    <input type="date" id="evStart" min="2026-08-01" max="2026-09-30">
+
     <label for="evEnd">Ends (optional &mdash; for multi-day events)</label>
     <input type="date" id="evEnd" min="2026-08-01" max="2026-09-30">
 
@@ -388,12 +391,19 @@ window.tripViewPass = localStorage.getItem('tripViewPass') || '';
     hide:function(){ html.classList.remove('locked'); }
   };
 
-  function attempt(pass){
+  function attempt(pass,tries){
+    tries=tries||0;
     status.textContent='Checking…';
-    return fetch('/api/events',{headers:{'x-view-pass':pass}}).then(function(r){
+    // ?check=1 validates the passcode without touching the database, so a
+    // sleeping database can't turn a correct passcode into a network error.
+    return fetch('/api/events?check=1',{headers:{'x-view-pass':pass}}).then(function(r){
       if(r.ok){ localStorage.setItem('tripViewPass',pass); window.tripViewPass=pass; location.reload(); return; }
-      status.textContent='Wrong passcode — try again.'; input.value=''; input.focus();
-    }).catch(function(){ status.textContent='Network error — try again.'; });
+      if(r.status===401){ status.textContent='Wrong passcode — try again.'; input.value=''; input.focus(); return; }
+      throw new Error('bad status '+r.status);
+    }).catch(function(){
+      if(tries<2){ status.textContent='Connecting…'; return new Promise(function(res){ setTimeout(res,900); }).then(function(){ return attempt(pass,tries+1); }); }
+      status.textContent='Network error — check your connection and try again.';
+    });
   }
   btn.addEventListener('click',function(){ var p=input.value.trim(); if(p) attempt(p); });
   input.addEventListener('keydown',function(e){ if(e.key==='Enter'){ var p=input.value.trim(); if(p) attempt(p); } });
@@ -419,6 +429,7 @@ window.tripViewPass = localStorage.getItem('tripViewPass') || '';
   var evEmpty=document.getElementById('evEmpty');
   var evTitle=document.getElementById('evTitle');
   var evTime=document.getElementById('evTime');
+  var evStart=document.getElementById('evStart');
   var evEnd=document.getElementById('evEnd');
   var evNotes=document.getElementById('evNotes');
   var evPass=document.getElementById('evPass');
@@ -540,7 +551,7 @@ window.tripViewPass = localStorage.getItem('tripViewPass') || '';
     });
   }
 
-  function clearForm(){ evTitle.value=''; evTime.value=''; evEnd.value=''; evNotes.value=''; }
+  function clearForm(){ evTitle.value=''; evTime.value=''; evEnd.value=''; evNotes.value=''; evStart.value=keyOf(current.y,current.m,current.d); }
   function cancelEdit(){
     editingId=null;
     evFormLabel.textContent='Add an event';
@@ -555,6 +566,7 @@ window.tripViewPass = localStorage.getItem('tripViewPass') || '';
     cancelEditBtn.hidden=false;
     evTitle.value=e.title||'';
     evTime.value=e.time||'';
+    evStart.value=e.day;
     evEnd.value=(e.end && e.end!==e.day)? e.end : '';
     evNotes.value=e.notes||'';
     evEnd.min=e.day;
@@ -591,21 +603,19 @@ window.tripViewPass = localStorage.getItem('tripViewPass') || '';
   function saveEvent(){
     var title=evTitle.value.trim();
     var time=evTime.value.trim();
+    var start=evStart.value.trim()||keyOf(current.y,current.m,current.d);
     var end=evEnd.value.trim();
     var notes=evNotes.value.trim();
-    var start=keyOf(current.y,current.m,current.d);
     var pass=evPass.value;
     var isEdit=editingId!==null;
-    // when editing, validate the end against the event's own start day
-    var startRef=start;
-    if(isEdit){ var ev=events.filter(function(x){return x.id===editingId;})[0]; if(ev) startRef=ev.day; }
     if(!title){ setStatus('Enter an event first.','err'); evTitle.focus(); return; }
-    if(end && end<startRef){ setStatus('End date must be on or after the start day.','err'); evEnd.focus(); return; }
+    if(!start){ setStatus('Pick a start date.','err'); evStart.focus(); return; }
+    if(end && end<start){ setStatus('End date must be on or after the start day.','err'); evEnd.focus(); return; }
     if(!pass){ setStatus('Enter the family passcode.','err'); evPass.focus(); return; }
     localStorage.setItem('tripEditPass',pass);
     saveBtn.disabled=true; setStatus(isEdit?'Updating…':'Saving…');
     var opts=isEdit
-      ? {method:'PATCH', body:{id:editingId,end:end,title:title,time:time,notes:notes}}
+      ? {method:'PATCH', body:{id:editingId,day:start,end:end,title:title,time:time,notes:notes}}
       : {method:'POST',  body:{day:start,end:end,title:title,time:time,notes:notes}};
     fetch(API,{
       method:opts.method,
@@ -662,6 +672,7 @@ window.tripViewPass = localStorage.getItem('tripViewPass') || '';
   });
 
   saveBtn.addEventListener('click',saveEvent);
+  evStart.addEventListener('change',function(){ if(evStart.value){ evEnd.min=evStart.value; if(evEnd.value && evEnd.value<evStart.value) evEnd.value=''; } });
   cancelEditBtn.addEventListener('click',function(){ cancelEdit(); setStatus(''); });
   evTitle.addEventListener('keydown',function(e){ if(e.key==='Enter') saveEvent(); });
   document.getElementById('closeModal').addEventListener('click',close);
