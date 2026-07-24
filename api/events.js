@@ -88,6 +88,38 @@ export default async function handler(req, res) {
       return res.status(201).json({ event: rows[0] });
     }
 
+    if (req.method === 'PATCH') {
+      const body = req.body || {};
+      const id = parseInt(body.id, 10);
+      if (!id) return res.status(400).json({ error: 'Missing event id.' });
+
+      const cur = await sql`SELECT to_char(day, 'YYYY-MM-DD') AS day FROM events WHERE id = ${id}`;
+      if (!cur.rows.length) return res.status(404).json({ error: 'Event not found.' });
+      const day = cur.rows[0].day; // start date is not changed by edit
+
+      const title = (body.title || '').trim();
+      const time = (body.time || '').trim() || null;
+      const notes = (body.notes || '').trim() || null;
+      let end = (body.end || '').trim() || null;
+
+      if (!title) return res.status(400).json({ error: 'Event text is required.' });
+      if (title.length > 200) return res.status(400).json({ error: 'Event text is too long (max 200 chars).' });
+      if (time && time.length > 40) return res.status(400).json({ error: 'Time is too long.' });
+      if (notes && notes.length > 1000) return res.status(400).json({ error: 'Notes are too long (max 1000 chars).' });
+      if (end !== null) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(end)) return res.status(400).json({ error: 'Invalid end date.' });
+        if (end < day) return res.status(400).json({ error: 'End date must be on or after the start date.' });
+        if (end === day) end = null;
+      }
+
+      const { rows } = await sql`
+        UPDATE events SET title = ${title}, time = ${time}, end_day = ${end}, notes = ${notes}
+        WHERE id = ${id}
+        RETURNING id, to_char(day, 'YYYY-MM-DD') AS day,
+                  to_char(end_day, 'YYYY-MM-DD') AS end, title, time, notes`;
+      return res.status(200).json({ event: rows[0] });
+    }
+
     if (req.method === 'DELETE') {
       const id = parseInt(req.query.id || (req.body && req.body.id), 10);
       if (!id) return res.status(400).json({ error: 'Missing event id.' });
@@ -95,7 +127,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
-    res.setHeader('Allow', 'GET, POST, DELETE');
+    res.setHeader('Allow', 'GET, POST, PATCH, DELETE');
     return res.status(405).json({ error: 'Method not allowed.' });
   } catch (e) {
     return res.status(500).json({ error: 'Server error.', detail: String((e && e.message) || e) });

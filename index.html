@@ -199,6 +199,8 @@
   .evlist li:last-child{border-bottom:0}
   .evlist .etime{color:var(--teal);font-weight:700;margin-right:6px}
   .evlist .enote{display:block;margin-top:3px;color:var(--ink-soft);font-size:.85rem;white-space:pre-wrap}
+  .evlist .evactions{flex:0 0 auto;display:inline-flex;gap:2px}
+  .evlist .edit{background:none;border:0;color:var(--teal);cursor:pointer;font-size:.8rem;font-weight:700;padding:2px 4px}
   .evlist .del{background:none;border:0;color:var(--clay);cursor:pointer;font-size:.8rem;font-weight:700;padding:2px 4px}
   .evempty{color:var(--ink-soft);font-size:.9rem;font-style:italic;padding:6px 0 2px}
   .divider{height:1px;background:var(--line);margin:16px 0}
@@ -347,7 +349,7 @@
 
     <div class="divider"></div>
 
-    <label for="evTitle">Add an event</label>
+    <label for="evTitle" id="evFormLabel">Add an event</label>
     <input type="text" id="evTitle" placeholder="e.g. Beach day" autocomplete="off" maxlength="200">
 
     <label for="evTime">Time (optional)</label>
@@ -366,6 +368,7 @@
 
     <div class="btns">
       <button class="btn primary" id="saveBtn" type="button">Save event</button>
+      <button class="btn ghost" id="cancelEditBtn" type="button" hidden>Cancel edit</button>
       <button class="btn ghost" id="closeModal" type="button">Close</button>
     </div>
   </div>
@@ -421,9 +424,12 @@ window.tripViewPass = localStorage.getItem('tripViewPass') || '';
   var evPass=document.getElementById('evPass');
   var statusEl=document.getElementById('status');
   var saveBtn=document.getElementById('saveBtn');
+  var cancelEditBtn=document.getElementById('cancelEditBtn');
+  var evFormLabel=document.getElementById('evFormLabel');
 
   var events=[];              // all events, from the API
   var current={y:0,m:0,d:0};  // currently open day
+  var editingId=null;         // id of the event being edited, or null when adding
 
   function pad(n){return ('0'+n).slice(-2);}
   function keyOf(y,m,d){return y+'-'+pad(m)+'-'+pad(d);}
@@ -521,19 +527,46 @@ window.tripViewPass = localStorage.getItem('tripViewPass') || '';
       var rangeTxt=(e.end && e.end!==e.day)? ' <span class="etime">'+rangeLabel(e.day,e.end)+'</span>':'';
       var noteTxt=e.notes? '<span class="enote">'+esc(e.notes)+'</span>':'';
       span.innerHTML=(e.time? '<span class="etime">'+esc(e.time)+'</span>':'')+esc(e.title)+rangeTxt+noteTxt;
+      var actions=document.createElement('span'); actions.className='evactions';
+      var edit=document.createElement('button');
+      edit.className='edit'; edit.type='button'; edit.textContent='Edit';
+      edit.addEventListener('click',function(){ startEdit(e); });
       var del=document.createElement('button');
       del.className='del'; del.type='button'; del.textContent='Delete';
       del.addEventListener('click',function(){ removeEvent(e.id); });
-      li.appendChild(span); li.appendChild(del);
+      actions.appendChild(edit); actions.appendChild(del);
+      li.appendChild(span); li.appendChild(actions);
       evList.appendChild(li);
     });
+  }
+
+  function clearForm(){ evTitle.value=''; evTime.value=''; evEnd.value=''; evNotes.value=''; }
+  function cancelEdit(){
+    editingId=null;
+    evFormLabel.textContent='Add an event';
+    saveBtn.textContent='Save event';
+    cancelEditBtn.hidden=true;
+    clearForm();
+  }
+  function startEdit(e){
+    editingId=e.id;
+    evFormLabel.textContent='Edit event';
+    saveBtn.textContent='Update event';
+    cancelEditBtn.hidden=false;
+    evTitle.value=e.title||'';
+    evTime.value=e.time||'';
+    evEnd.value=(e.end && e.end!==e.day)? e.end : '';
+    evNotes.value=e.notes||'';
+    evEnd.min=e.day;
+    setStatus('');
+    evTitle.focus();
   }
 
   function openFor(y,m,d){
     current={y:y,m:m,d:d};
     var wd=new Date(y,m-1,d).getDay();
     mDate.textContent=WEEKDAYS[wd]+', '+MONTHS[m-1]+' '+d+', '+y;
-    evTitle.value=''; evTime.value=''; evEnd.value=''; evNotes.value='';
+    cancelEdit();
     evEnd.min=keyOf(y,m,d);
     evPass.value=localStorage.getItem('tripEditPass')||'';
     setStatus('');
@@ -562,23 +595,37 @@ window.tripViewPass = localStorage.getItem('tripViewPass') || '';
     var notes=evNotes.value.trim();
     var start=keyOf(current.y,current.m,current.d);
     var pass=evPass.value;
+    var isEdit=editingId!==null;
+    // when editing, validate the end against the event's own start day
+    var startRef=start;
+    if(isEdit){ var ev=events.filter(function(x){return x.id===editingId;})[0]; if(ev) startRef=ev.day; }
     if(!title){ setStatus('Enter an event first.','err'); evTitle.focus(); return; }
-    if(end && end<start){ setStatus('End date must be on or after this day.','err'); evEnd.focus(); return; }
+    if(end && end<startRef){ setStatus('End date must be on or after the start day.','err'); evEnd.focus(); return; }
     if(!pass){ setStatus('Enter the family passcode.','err'); evPass.focus(); return; }
     localStorage.setItem('tripEditPass',pass);
-    saveBtn.disabled=true; setStatus('Saving…');
+    saveBtn.disabled=true; setStatus(isEdit?'Updating…':'Saving…');
+    var opts=isEdit
+      ? {method:'PATCH', body:{id:editingId,end:end,title:title,time:time,notes:notes}}
+      : {method:'POST',  body:{day:start,end:end,title:title,time:time,notes:notes}};
     fetch(API,{
-      method:'POST',
+      method:opts.method,
       headers:{'Content-Type':'application/json','x-edit-pass':pass},
-      body:JSON.stringify({day:start,end:end,title:title,time:time,notes:notes})
+      body:JSON.stringify(opts.body)
     }).then(function(r){return r.json().then(function(b){return {ok:r.ok,body:b};});})
       .then(function(res){
         if(!res.ok){ setStatus(res.body.error||'Could not save.','err'); return; }
-        events.push(res.body.event);
-        evTitle.value=''; evTime.value=''; evEnd.value=''; evNotes.value='';
-        renderList(); renderDots(); renderPlans();
-        setStatus('Saved!','ok');
-        evTitle.focus();
+        if(isEdit){
+          events=events.map(function(x){return x.id===res.body.event.id? res.body.event : x;});
+          cancelEdit();
+          renderList(); renderDots(); renderPlans();
+          setStatus('Updated!','ok');
+        } else {
+          events.push(res.body.event);
+          clearForm();
+          renderList(); renderDots(); renderPlans();
+          setStatus('Saved!','ok');
+          evTitle.focus();
+        }
       }).catch(function(){ setStatus('Network error — try again.','err'); })
       .then(function(){ saveBtn.disabled=false; });
   }
@@ -615,6 +662,7 @@ window.tripViewPass = localStorage.getItem('tripViewPass') || '';
   });
 
   saveBtn.addEventListener('click',saveEvent);
+  cancelEditBtn.addEventListener('click',function(){ cancelEdit(); setStatus(''); });
   evTitle.addEventListener('keydown',function(e){ if(e.key==='Enter') saveEvent(); });
   document.getElementById('closeModal').addEventListener('click',close);
   back.addEventListener('click',function(e){ if(e.target===back) close(); });
